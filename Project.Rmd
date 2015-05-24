@@ -1,0 +1,93 @@
+---
+title: "Practical Machine Learning Project"
+author: "Siyu Deng"
+date: "May 24, 2015"
+output: html_document
+---
+
+This document is the final project of Practical Machine Learning.
+
+####Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+####Data
+The training data for this project are available here[1]: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+####Load packages and set seed for reproduceability
+
+```{r}
+library(caret)
+library(randomForest)
+library(e1071)
+set.seed(1223)
+```
+
+###Load and clean data
+
+```{r}
+#Load the training and testing data set into R and replace "NA","#DIV/0!","" with NA
+train = read.csv("~/Downloads/pml-training.csv",na.strings=c("NA","#DIV/0!", ""))
+test = read.csv("~/Downloads/pml-testing.csv",na.strings=c("NA","#DIV/0!", ""))
+
+#Get the dimension of training set and testing set
+dim(train)
+dim(test)
+
+#Eliminate NA columns
+train = train[,colSums(is.na(train)) == 0]
+test = test[,colSums(is.na(test)) == 0]
+
+#Delete the irrelevant columns
+train = train[,-c(1:7)]
+test = test[,-c(1:7)]
+```
+
+
+```{r}
+#New training set
+dim(train)
+#New testing set
+dim(test)
+```
+
+####Partition training set for cross-validation
+```{r}
+#I partition the training set into two sub sets without replacement. One contains 75% of the training data as my subTrain data set to counstruct the model. The rest 25% will be used to test the accuracy of the model I counstruct.
+samples = createDataPartition(y=train$classe, p=0.75, list=FALSE)
+subTrain = train[samples,]
+subTest = train[-samples,]
+#Sub training set 
+dim(subTrain)
+#Sub testing set
+dim(subTest)
+```
+
+####Model countruction
+&nbsp;&nbsp;&nbsp;&nbsp; Sice the outcome variable is "classe" it is a factor with five levels and the data set is large enough. I will try to use Random Forest Algorithm to counstruct the model.
+
+```{r}
+#Here I will choose random forest algorithm to construct the model
+model = randomForest(classe ~. , data=subTrain, method="class")
+
+#Prediction
+prediction = predict(model,subTest,type="class")
+
+#Model performance on subTest data set:
+confusionMatrix(prediction, subTest$classe)
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp; As showing from the above table, accuracy for Random Forest model is 0.9947 (95% CI : (0.9922, 0.9965)). So the expected out of sample error is 0.0053. Since the expected out of sample error is very low, Random Forest Model should be a good choice for these data.    
+
+####Predict 20 different test cases
+```{r}
+pred = predict(model,test,type="class")
+pred
+```
+
+[1]Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
